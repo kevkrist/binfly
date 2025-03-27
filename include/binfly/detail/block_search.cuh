@@ -127,15 +127,19 @@ BlockBinfly<BlockThreads, ItemsPerThread, KeyT, IndexT, SmemMultiplier>::block_s
   else if (warp.meta_group_rank() == num_valid_warps - 1)
   {
     // Simple binary search for the last warp
-    if (warp.thread_rank() != 0 && threadIdx.x * ItemsPerThread < num_valid_keys)
+    std::uint32_t local_idx = threadIdx.x * ItemsPerThread;
+    if (warp.thread_rank() != 0 && local_idx < num_valid_keys)
     {
       search_indices[0] = binary_search(search_data, search_keys[0], start, end);
     }
+    ++local_idx;
+
 #pragma unroll
-    for (std::int32_t idx = 1; idx < ItemsPerThread; ++idx)
+    for (std::int32_t idx = 1; idx < ItemsPerThread; ++idx, ++local_idx)
     {
-      if (threadIdx.x * ItemsPerThread + idx < num_valid_keys)
+      if (local_idx < num_valid_keys)
       {
+        // KEVIN: consider narrowing the box by propagating starts from below
         search_indices[idx] = binary_search(search_data, search_keys[idx], start, end);
       }
     }
