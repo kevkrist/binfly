@@ -32,7 +32,7 @@ BlockBinfly<BlockThreads, ItemsPerThread, KeyT, IndexT, SmemMultiplier>::warp_se
   const IndexT temp = warp.shfl_down(search_indices[0], 1);
   if (warp.thread_rank() != warp.size() - 1)
   {
-    end = temp;
+    end = temp + 1;
   }
 
   // Propagate the start index from the previous search as you climb the key layers

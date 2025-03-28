@@ -9,13 +9,17 @@ namespace binfly
 
 namespace cg = cooperative_groups;
 
-template <std::uint32_t BlockThreads, // Assumed to be a multiple of 32
+template <std::uint32_t BlockThreads,
           std::uint32_t ItemsPerThread,
           typename KeyT,
           typename IndexT,
           std::uint32_t SmemMultiplier = 4>
 class BlockBinfly
 {
+  static_assert(BlockThreads % warp_threads == 0,
+                "The number of threads per block must be a multiple of the number of threads per "
+                "warp.");
+
   using key_t   = KeyT;
   using index_t = IndexT;
   using warp_t  = cg::thread_block_tile<warp_threads, cg::thread_block>;

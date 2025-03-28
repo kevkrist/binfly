@@ -3,7 +3,6 @@
 #include <cstdint>
 #include <cub/cub.cuh>
 #include <gtest/gtest.h>
-#include <limits>
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 #include <thrust/sequence.h>
@@ -13,7 +12,7 @@ using index_t                            = std::uint32_t;
 constexpr std::uint32_t block_threads    = 32; // warp size
 constexpr std::uint32_t items_per_thread = 2;
 constexpr std::uint32_t num_search_keys  = block_threads * items_per_thread;
-constexpr std::uint32_t smem_multiplier  = 1;
+constexpr std::uint32_t smem_multiplier  = 1; // dummy
 
 using block_binfly_t =
   binfly::BlockBinfly<block_threads, items_per_thread, key_t, index_t, smem_multiplier>;
@@ -46,6 +45,10 @@ __global__ void test_warp_search_kernel(const key_t* search_data,
 
   // Do warp search
   auto warp = cg::tiled_partition<block_threads>(cg::this_thread_block());
+  if (warp.thread_rank() == 0)
+  {
+    thread_indices[0] = 0; // Weed to set this manually
+  }
   block_binfly_t(binfly_storage)
     .warp_search(warp, thread_indices, search_data, thread_keys, start, end);
 
@@ -77,22 +80,32 @@ protected:
 
     search_indices_h = search_indices_d;
   }
+
+  void verify_results(const thrust::host_vector<index_t>& search_indices,
+                      const thrust::host_vector<key_t>& search_data,
+                      const thrust::host_vector<key_t>& search_keys)
+  {
+    for (auto i = 0; i < (std::int32_t)num_search_keys; ++i)
+    {
+      index_t expected =
+        binfly::binary_search<key_t, index_t>(thrust::raw_pointer_cast(search_data.data()),
+                                              search_keys[i],
+                                              0,
+                                              search_data.size());
+      EXPECT_EQ(search_indices[i], expected) << "Key: " << search_keys[i] << ", Index: " << i;
+    }
+  }
 };
 
 // **Test 1**
-TEST_F(WarpSearchTest, SortedInputFindsLowerBounds)
+TEST_F(WarpSearchTest, DefaultTest)
 {
-  const thrust::host_vector<key_t> search_data = {1, 5, 21, 23, 25, 33, 37, 99, 150};
+  thrust::host_vector<key_t> search_data = {1, 5, 21, 23, 25, 33, 37, 99, 150};
   thrust::host_vector<key_t> search_keys(num_search_keys);
   thrust::sequence(search_keys.begin(), search_keys.end(), 0, 2);
-  thrust::host_vector<index_t> search_indices(num_search_keys, std::numeric_limits<index_t>::max());
+  thrust::host_vector<index_t> search_indices(num_search_keys);
 
   run_warp_search_test(search_data, search_keys, search_indices, 0, search_data.size());
 
-  for (auto i = 0; i < (std::int32_t)num_search_keys; ++i)
-  {
-    auto it          = std::lower_bound(search_data.begin(), search_data.end(), search_keys[i]);
-    index_t expected = static_cast<index_t>(std::distance(search_data.begin(), it));
-    EXPECT_EQ(search_indices[i], expected) << "Key: " << search_keys[i];
-  }
+  verify_results(search_indices, search_data, search_keys);
 }

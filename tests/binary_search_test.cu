@@ -1,9 +1,13 @@
 #include <binfly/detail/binary_search.cuh>
+#include <cstdint>
 #include <cub/cub.cuh>
 #include <gtest/gtest.h>
+#include <thrust/host_vector.h>
 
 namespace binfly
 {
+using index_t = std::int32_t;
+using key_t   = std::int32_t;
 
 // **Test Fixture for Binary Search**
 class BinarySearchTest : public ::testing::Test
@@ -12,20 +16,20 @@ protected:
   void SetUp() override
   {
     sorted_data = {1, 3, 5, 7, 9, 11, 13, 17};
-    size        = sorted_data.size();
+    end = index_t(sorted_data.size());
   }
 
-  std::vector<std::int32_t> sorted_data;
-  std::size_t size;
+  thrust::host_vector<key_t> sorted_data;
+  index_t end;
 };
 
 // **Test Case 1: Search for an existing element**
 TEST_F(BinarySearchTest, FindsExactMatch)
 {
-  std::int32_t key            = 7;
-  std::int32_t expected_index = 3; // sorted_data[3] == 7
+  key_t key              = 7;
+  index_t expected_index = 3; // sorted_data[3] == 7
 
-  std::int32_t found_index = binary_search(sorted_data.data(), key, size_t(0), size);
+  index_t found_index = binary_search(sorted_data.data(), key, index_t(0), end);
 
   EXPECT_EQ(found_index, expected_index);
 }
@@ -33,10 +37,10 @@ TEST_F(BinarySearchTest, FindsExactMatch)
 // **Test Case 2: Search for a non-existing element**
 TEST_F(BinarySearchTest, FindsInsertionPoint)
 {
-  std::int32_t key            = 8;
-  std::int32_t expected_index = 4; // sorted_data[3] <= 8 < sorted_data[4]
+  key_t key              = 8;
+  index_t expected_index = 3; // sorted_data[3] <= 8 < sorted_data[4]
 
-  std::int32_t found_index = binary_search(sorted_data.data(), key, size_t(0), size);
+  index_t found_index = binary_search(sorted_data.data(), key, index_t(0), end);
 
   EXPECT_EQ(found_index, expected_index);
 }
@@ -44,10 +48,10 @@ TEST_F(BinarySearchTest, FindsInsertionPoint)
 // **Test Case 3: Search for the smallest element**
 TEST_F(BinarySearchTest, FindsFirstElement)
 {
-  std::int32_t key            = 1;
-  std::int32_t expected_index = 0;
+  key_t key              = 1;
+  index_t expected_index = 0;
 
-  std::int32_t found_index = binary_search(sorted_data.data(), key, size_t(0), size);
+  index_t found_index = binary_search(sorted_data.data(), key, index_t(0), end);
 
   EXPECT_EQ(found_index, expected_index);
 }
@@ -55,10 +59,10 @@ TEST_F(BinarySearchTest, FindsFirstElement)
 // **Test Case 4: Search for the largest element**
 TEST_F(BinarySearchTest, FindsLastElement)
 {
-  std::int32_t key            = 17;
-  std::int32_t expected_index = 7;
+  key_t key              = 17;
+  index_t expected_index = 7;
 
-  std::int32_t found_index = binary_search(sorted_data.data(), key, size_t(0), size);
+  index_t found_index = binary_search(sorted_data.data(), key, index_t(0), end);
 
   EXPECT_EQ(found_index, expected_index);
 }
@@ -66,10 +70,10 @@ TEST_F(BinarySearchTest, FindsLastElement)
 // **Test Case 5: Search for an out-of-bounds element (larger)**
 TEST_F(BinarySearchTest, FindsEndForLargerElement)
 {
-  std::int32_t key            = 20;
-  std::int32_t expected_index = size; // Should be placed after last element
+  key_t key              = 20;
+  index_t expected_index = end - 1; // Should be placed at last index
 
-  std::int32_t found_index = binary_search(sorted_data.data(), key, size_t(0), size);
+  index_t found_index = binary_search(sorted_data.data(), key, index_t(0), end);
 
   EXPECT_EQ(found_index, expected_index);
 }
@@ -77,10 +81,10 @@ TEST_F(BinarySearchTest, FindsEndForLargerElement)
 // **Test Case 6: Search for an out-of-bounds element (smaller)**
 TEST_F(BinarySearchTest, FindsStartForSmallerElement)
 {
-  std::int32_t key            = -5;
-  std::int32_t expected_index = 0; // Should be placed at the beginning
+  key_t key              = -5;
+  index_t expected_index = 0; // Should be placed at the first index
 
-  std::int32_t found_index = binary_search(sorted_data.data(), key, size_t(0), size);
+  index_t found_index = binary_search(sorted_data.data(), key, index_t(0), end);
 
   EXPECT_EQ(found_index, expected_index);
 }

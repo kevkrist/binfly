@@ -57,3 +57,5 @@ ConfigureTest(WARP_SEARCH_TEST
     "${CMAKE_CURRENT_SOURCE_DIR}/warp_search_test.cu")
 ConfigureTest(PARTITIONED_SEARCH_TEST
     "${CMAKE_CURRENT_SOURCE_DIR}/partitioned_search_test.cu")
+ConfigureTest(BLOCK_SEARCH_TEST
+    "${CMAKE_CURRENT_SOURCE_DIR}/block_search_test.cu")
