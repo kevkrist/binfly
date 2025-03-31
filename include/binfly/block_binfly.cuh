@@ -17,8 +17,7 @@ template <std::uint32_t BlockThreads,
 class BlockBinfly
 {
   static_assert(BlockThreads % warp_threads == 0,
-                "The number of threads per block must be a multiple of the number of threads per "
-                "warp.");
+                "The number of block threads must be a multiple of the number of warp threads.");
 
   using key_t   = KeyT;
   using index_t = IndexT;

@@ -15,7 +15,7 @@ struct DeviceBinfly
   static constexpr std::uint32_t items_per_thread = ItemsPerThread;
   static constexpr std::uint32_t tile_items       = block_threads * items_per_thread;
 
-  static __host__ cudaError_t tile_starts(KeyT* tile_starts,
+  static __host__ cudaError_t tile_starts(IndexT* tile_starts,
                                           std::size_t& num_tile_starts,
                                           const KeyT* search_keys,
                                           IndexT num_search_keys,
@@ -25,20 +25,23 @@ struct DeviceBinfly
   {
     // Determine the number of tiles of search keys
     const IndexT num_tiles = cuda::ceil_div(num_search_keys, static_cast<IndexT>(tile_items));
+
     // Determine the allocation requirements
-    if (num_tiles == nullptr)
+    if (tile_starts == nullptr)
     {
-      num_tile_starts = sizeof(KeyT) * (num_tiles + 1);
+      num_tile_starts = num_tiles + 1;
       return cudaSuccess;
     }
 
     // Assume correct allocation
-    partitioned_search<<<num_tiles, BlockThreads, 0, stream>>>(tile_starts,
-                                                               num_tiles,
-                                                               search_keys,
-                                                               num_search_keys,
-                                                               search_data,
-                                                               num_search_data);
+    const std::size_t num_partitioned_search_tiles =
+      cuda::ceil_div(num_tile_starts, static_cast<std::size_t>(block_threads));
+    partitioned_search<<<num_partitioned_search_tiles, BlockThreads, 0, stream>>>(tile_starts,
+                                                                                  num_tiles,
+                                                                                  search_keys,
+                                                                                  num_search_keys,
+                                                                                  search_data,
+                                                                                  num_search_data);
 
     // Check for execution error
     return CubDebug(cudaGetLastError());
@@ -60,7 +63,7 @@ struct DeviceBinfly
     __device__ __forceinline__ void block_search(IndexT (&search_indices)[ItemsPerThread],
                                                  const KeyT* search_data,
                                                  const KeyT (&search_keys)[ItemsPerThread],
-                                                 const KeyT* tile_starts)
+                                                 const IndexT* tile_starts)
     {
       block_binfly_t(storage).block_search(search_indices,
                                            search_data,
@@ -74,16 +77,14 @@ struct DeviceBinfly
                                                  const KeyT* search_data,
                                                  const KeyT (&search_keys)[ItemsPerThread],
                                                  IndexT num_valid_keys,
-                                                 const KeyT* tile_starts)
+                                                 const IndexT* tile_starts)
     {
-      block_binfly_t(storage).block_search(
-        search_indices,
+      block_binfly_t(storage).block_search(search_indices,
                                            search_data,
                                            search_keys,
                                            num_valid_keys,
                                            tile_starts[blockIdx.x],
-                                           tile_starts[blockIdx.x + 1])
-      );
+                                           tile_starts[blockIdx.x + 1]);
     }
 
   private:

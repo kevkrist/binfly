@@ -1,7 +1,6 @@
 #include <binfly/block_binfly.cuh>
 #include <cstdint>
 #include <cub/cub.cuh>
-#include <cuda_runtime_api.h>
 #include <gtest/gtest.h>
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
@@ -25,7 +24,7 @@ __global__ void test_block_search_kernel(const key_t* search_data,
   static constexpr std::uint32_t tile_items       = block_threads * items_per_thread;
 
   using block_binfly_t =
-    binfly::BlockBinfly<BlockThreads, ItemsPerThread, key_t, index_t, smem_multiplier>;
+    binfly::BlockBinfly<block_threads, items_per_thread, key_t, index_t, smem_multiplier>;
   using block_load_t =
     cub::BlockLoad<key_t, block_threads, items_per_thread, cub::BLOCK_LOAD_DIRECT>;
   using block_load_storage_t = typename block_load_t::TempStorage;
@@ -137,25 +136,70 @@ TEST_F(binfly_test_t, FullTileSmem)
   verify_results(search_indices, search_data, search_keys, num_search_keys);
 }
 
-// // **Test 2: Full tile, search data does NOT fit in shared memory**
-// TEST_F(binfly_test_t, FillTileGmem)
-// {
-//   constexpr std::uint32_t block_threads    = binfly_test_t::block_threads;
-//   constexpr std::uint32_t items_per_thread = binfly_test_t::items_per_thread;
-//   constexpr std::uint32_t num_search_keys  = block_threads * items_per_thread;
+// **Test 2: Full tile, search data does NOT fit in shared memory**
+TEST_F(binfly_test_t, FillTileGmem)
+{
+  constexpr std::uint32_t block_threads    = binfly_test_t::block_threads;
+  constexpr std::uint32_t items_per_thread = binfly_test_t::items_per_thread;
+  constexpr std::uint32_t num_search_keys  = block_threads * items_per_thread;
 
-//   thrust::host_vector<key_t> search_data(num_search_keys);
-//   thrust::sequence(search_data.begin(), search_data.end(), 0, 4);
-//   thrust::host_vector<key_t> search_keys(num_search_keys);
-//   thrust::sequence(search_keys.begin(), search_keys.end(), 2, 3);
-//   thrust::host_vector<index_t> search_indices(num_search_keys);
+  thrust::host_vector<key_t> search_data(num_search_keys);
+  thrust::sequence(search_data.begin(), search_data.end(), 0, 4);
+  thrust::host_vector<key_t> search_keys(num_search_keys);
+  thrust::sequence(search_keys.begin(), search_keys.end(), 2, 3);
+  thrust::host_vector<index_t> search_indices(num_search_keys);
 
-//   run_block_search_test(search_data,
-//                         search_keys,
-//                         num_search_keys,
-//                         search_indices,
-//                         0,
-//                         search_data.size());
+  run_block_search_test(search_data,
+                        search_keys,
+                        num_search_keys,
+                        search_indices,
+                        0,
+                        search_data.size());
 
-//   verify_results(search_indices, search_data, search_keys, num_search_keys);
-// }
+  verify_results(search_indices, search_data, search_keys, num_search_keys);
+}
+
+// **Test 3: Partial tile, search data fits in shared memory**
+TEST_F(binfly_test_t, PartialTileSmem)
+{
+  constexpr std::uint32_t block_threads    = binfly_test_t::block_threads;
+  constexpr std::uint32_t items_per_thread = binfly_test_t::items_per_thread;
+  constexpr std::uint32_t num_search_keys  = block_threads * items_per_thread - 7;
+
+  thrust::host_vector<key_t> search_data = {0, 7, 13, 44, 45, 55, 67, 91};
+  thrust::host_vector<key_t> search_keys(num_search_keys);
+  thrust::sequence(search_keys.begin(), search_keys.end(), 2, 3);
+  thrust::host_vector<index_t> search_indices(num_search_keys);
+
+  run_block_search_test(search_data,
+                        search_keys,
+                        num_search_keys,
+                        search_indices,
+                        0,
+                        search_data.size());
+
+  verify_results(search_indices, search_data, search_keys, num_search_keys);
+}
+
+// **Test 4: Partial tile, search data fits in shared memory**
+TEST_F(binfly_test_t, PartialTileGmem)
+{
+  constexpr std::uint32_t block_threads    = binfly_test_t::block_threads;
+  constexpr std::uint32_t items_per_thread = binfly_test_t::items_per_thread;
+  constexpr std::uint32_t num_search_keys  = block_threads * items_per_thread - 7;
+
+  thrust::host_vector<key_t> search_data(num_search_keys);
+  thrust::sequence(search_data.begin(), search_data.end(), 0, 4);
+  thrust::host_vector<key_t> search_keys(num_search_keys);
+  thrust::sequence(search_keys.begin(), search_keys.end(), 2, 3);
+  thrust::host_vector<index_t> search_indices(num_search_keys);
+
+  run_block_search_test(search_data,
+                        search_keys,
+                        num_search_keys,
+                        search_indices,
+                        0,
+                        search_data.size());
+
+  verify_results(search_indices, search_data, search_keys, num_search_keys);
+}

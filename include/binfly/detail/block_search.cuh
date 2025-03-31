@@ -60,7 +60,7 @@ BlockBinfly<BlockThreads, ItemsPerThread, KeyT, IndexT, SmemMultiplier>::block_s
   // Update end for all but the last warp by propagating start down one warp
   if (warp.meta_group_rank() != warp.meta_group_size() - 1)
   {
-    end = storage.warp_ends[warp.meta_group_rank()];
+    end = storage.warp_ends[warp.meta_group_rank()] + 1;
   }
 
   // Invoke warp search
@@ -121,7 +121,7 @@ BlockBinfly<BlockThreads, ItemsPerThread, KeyT, IndexT, SmemMultiplier>::block_s
   // Update end for all but the last warp by propagating start down one warp
   if (warp.meta_group_rank() < num_valid_warps - 1)
   {
-    end = storage.warp_ends[warp.meta_group_rank()];
+    end = storage.warp_ends[warp.meta_group_rank()] + 1;
     warp_search(warp, search_indices, search_data_alias, search_keys, start, end);
   }
   else if (warp.meta_group_rank() == num_valid_warps - 1)

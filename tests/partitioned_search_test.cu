@@ -5,6 +5,8 @@
 #include <thrust/host_vector.h>
 #include <thrust/sequence.h>
 
+// TODO: rewrite
+
 using key_t   = std::int32_t;
 using index_t = std::uint32_t;
 
