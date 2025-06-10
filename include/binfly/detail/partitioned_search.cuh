@@ -20,7 +20,7 @@ __global__ void partitioned_search(IndexT* tile_starts,
   {
     const IndexT key_idx = cub::min(tile_idx * TileItems, num_search_keys - 1);
     tile_starts[tile_idx] =
-      binary_search(search_data, search_keys[key_idx], (IndexT)0, num_search_data);
+      binary_search(search_data, search_keys[key_idx], static_cast<IndexT>(0), num_search_data);
   }
 }
 

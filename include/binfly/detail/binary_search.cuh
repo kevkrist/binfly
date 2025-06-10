@@ -11,6 +11,10 @@ template <typename T, typename IndexT>
 __host__ __device__ __forceinline__ IndexT
 binary_search(const T* search_data, const T& search_key, IndexT start, IndexT end)
 {
+  // Sentinel key indicating that search_data does not contain a key satisfying <= semantics with
+  // respect to search_key.
+  static constexpr IndexT sentinel = std::numeric_limits<IndexT>::max();
+
   IndexT idx;
   T current_key;
 
@@ -19,7 +23,11 @@ binary_search(const T* search_data, const T& search_key, IndexT start, IndexT en
     idx         = cub::MidPoint(start, end);
     current_key = search_data[idx];
 
-    if (current_key <= search_key)
+    if (current_key == search_key)
+    {
+      return idx;
+    }
+    else if (current_key < search_key)
     {
       start = idx + 1;
     }
@@ -29,7 +37,8 @@ binary_search(const T* search_data, const T& search_key, IndexT start, IndexT en
     }
   }
 
-  return start == 0 ? start : start - 1;
+  // start has incremented one beyond the index satisfying <= semantics
+  return start == 0 ? sentinel : start - 1;
 }
 
 // The hint index is assumed to be in the range [start, end)
@@ -43,14 +52,13 @@ binary_search_hint(const T* search_data, const T& search_key, IndexT hint, Index
   {
     return hint;
   }
-
-  if (hint_key < search_key)
+  else if (hint_key < search_key)
   {
-    start = hint;
+    start = hint + 1;
   }
   else
   {
-    end = hint + 1;
+    end = hint;
   }
 
   return binary_search(search_data, search_key, start, end);

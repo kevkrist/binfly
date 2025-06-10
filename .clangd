@@ -25,7 +25,7 @@ CompileFlags:
 # Tweak the clangd parse settings for all files
 CompileFlags:
   Compiler: clang++-18
-  CompilationDatabase: ./build
+  CompilationDatabase: ./build/debug
   Add:
     - -x
     - cuda
@@ -34,6 +34,11 @@ CompileFlags:
     # report all errors
     - "-ferror-limit=0"
     - "-ftemplate-backtrace-limit=0"
+        # recover includes from removal of --options-file (HACK -- take from compile_commands.json)
+    - "-I/home/ubuntu/code/binfly/include"
+    - "-I/home/ubuntu/code/binfly/build/debug/_deps/cccl-src/thrust/thrust/cmake/../.." 
+    - "-I/home/ubuntu/code/binfly/build/debug/_deps/cccl-src/libcudacxx/lib/cmake/libcudacxx/../../../include" 
+    - "-I/home/ubuntu/code/binfly/build/debug/_deps/cccl-src/cub/cub/cmake/../.."
   Remove:
     - -stdpar
     # strip CUDA fatbin args
@@ -56,6 +61,7 @@ CompileFlags:
     - "--expt-relaxed-constexpr"
     - "-forward-unknown-to-host-compiler"
     - "-Werror=cross-execution-space-call"
+    # strip unrecognized options-file flag
     - --options-file
 Diagnostics:
   Suppress:
