@@ -83,7 +83,7 @@ BlockBinfly<BlockThreads, ItemsPerThread, KeyT, IndexT, SmemMultiplier>::block_s
 #pragma unroll
     for (std::int32_t idx = 0; idx < ItemsPerThread; ++idx)
     {
-      search_indices[idx] += cached_start
+      search_indices[idx] += cached_start;
     }
   }
 }

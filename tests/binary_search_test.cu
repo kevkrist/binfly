@@ -6,8 +6,8 @@
 
 namespace binfly
 {
-using index_t = std::int32_t;
-using key_t   = std::int32_t;
+using index_t                                = std::int32_t;
+using key_t                                  = std::int32_t;
 
 // **Test Fixture for Binary Search**
 class BinarySearchTest : public ::testing::Test
@@ -16,7 +16,7 @@ protected:
   void SetUp() override
   {
     sorted_data = {1, 3, 5, 7, 9, 11, 13, 17};
-    end = index_t(sorted_data.size());
+    end         = index_t(sorted_data.size());
   }
 
   thrust::host_vector<key_t> sorted_data;

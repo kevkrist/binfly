@@ -29,11 +29,11 @@ BlockBinfly<BlockThreads, ItemsPerThread, KeyT, IndexT, SmemMultiplier>::warp_se
   // the warp fits in shared memory
   if (!is_search_data_block_shared)
   {
-    is_search_data_warp_shared = true;
-
     const index_t num_indices = end - start;
     if (num_indices <= max_warp_smem_keys)
     {
+      is_search_data_warp_shared = true;
+
 // Load the key range into shared memory
 #pragma unroll
       for (std::int32_t idx = 0; idx < smem_multiplier; ++idx)
@@ -53,6 +53,7 @@ BlockBinfly<BlockThreads, ItemsPerThread, KeyT, IndexT, SmemMultiplier>::warp_se
       end               = num_indices;
     }
   }
+  // Note that, because of SIMT, __syncthreads() is not needed here.
 
   // Binary search the first layer of keys (except the first thread)
   search_indices[0] = start;

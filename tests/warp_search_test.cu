@@ -8,14 +8,11 @@
 #include <thrust/sequence.h>
 
 using key_t                              = std::int32_t;
-using index_t                            = std::uint32_t;
+using index_t                            = std::int32_t;
 constexpr std::uint32_t block_threads    = 32; // warp size
 constexpr std::uint32_t items_per_thread = 2;
 constexpr std::uint32_t num_search_keys  = block_threads * items_per_thread;
-constexpr std::uint32_t smem_multiplier  = 1; // dummy
-
-using block_binfly_t =
-  binfly::BlockBinfly<block_threads, items_per_thread, key_t, index_t, smem_multiplier>;
+constexpr std::uint32_t smem_multiplier  = 1;
 
 // **Kernel for Warp Search**
 __global__ void test_warp_search_kernel(const key_t* search_data,
@@ -27,15 +24,18 @@ __global__ void test_warp_search_kernel(const key_t* search_data,
   namespace cg = cooperative_groups;
   using block_load_t =
     cub::BlockLoad<key_t, block_threads, items_per_thread, cub::BLOCK_LOAD_DIRECT>;
-  using block_load_storage_t = typename block_load_t::TempStorage;
   using block_store_t =
     cub::BlockStore<index_t, block_threads, items_per_thread, cub::BLOCK_STORE_DIRECT>;
+  using block_binfly_t =
+    binfly::BlockBinfly<block_threads, items_per_thread, key_t, index_t, smem_multiplier>;
+  using block_load_storage_t   = typename block_load_t::TempStorage;
   using block_store_storage_t  = typename block_store_t::TempStorage;
   using block_binfly_storage_t = typename block_binfly_t::temp_storage_t;
 
   __shared__ block_load_storage_t load_storage;
   __shared__ block_store_storage_t store_storage;
   __shared__ block_binfly_storage_t binfly_storage;
+  auto warp = cg::tiled_partition<block_threads>(cg::this_thread_block());
 
   key_t thread_keys[items_per_thread];
   index_t thread_indices[items_per_thread];
@@ -44,11 +44,6 @@ __global__ void test_warp_search_kernel(const key_t* search_data,
   block_load_t(load_storage).Load(search_keys, thread_keys);
 
   // Do warp search
-  auto warp = cg::tiled_partition<block_threads>(cg::this_thread_block());
-  if (warp.thread_rank() == 0)
-  {
-    thread_indices[0] = 0; // Weed to set this manually
-  }
   block_binfly_t(binfly_storage)
     .warp_search(warp, thread_indices, search_data, thread_keys, start, end);
 
@@ -97,8 +92,24 @@ protected:
   }
 };
 
-// **Test 1**
-TEST_F(WarpSearchTest, DefaultTest)
+// **Test 1: search data not in shared memory**
+TEST_F(WarpSearchTest, NoSmem)
+{
+  thrust::host_vector<key_t> search_data = {1,  5,  6,  7,   8,   11,  13,  17,  18,  21, 23, 25,
+                                            33, 37, 50, 51,  52,  53,  54,  55,  56,  57, 58, 59,
+                                            60, 61, 99, 101, 104, 107, 111, 123, 133, 150};
+  assert(search_data.size() >= smem_multiplier * block_threads);
+  thrust::host_vector<key_t> search_keys(num_search_keys);
+  thrust::sequence(search_keys.begin(), search_keys.end(), 0, 2);
+  thrust::host_vector<index_t> search_indices(num_search_keys);
+
+  run_warp_search_test(search_data, search_keys, search_indices, 0, search_data.size());
+
+  verify_results(search_indices, search_data, search_keys);
+}
+
+// **Test 2: search data in shared memory**
+TEST_F(WarpSearchTest, YesSmem)
 {
   thrust::host_vector<key_t> search_data = {1, 5, 21, 23, 25, 33, 37, 99, 150};
   thrust::host_vector<key_t> search_keys(num_search_keys);

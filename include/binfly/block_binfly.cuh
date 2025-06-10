@@ -1,8 +1,9 @@
 #pragma once
 
-#include "detail/utils.cuh"
+#include <binfly/detail/utils.cuh>
 #include <cooperative_groups.h>
 #include <cstdint>
+#include <type_traits>
 
 namespace binfly
 {
@@ -16,8 +17,8 @@ template <std::uint32_t BlockThreads,
           std::uint32_t SmemMultiplier = 4>
 class BlockBinfly
 {
-  static_assert(BlockThreads % warp_threads == 0,
-                "The number of block threads must be a multiple of the number of warp threads.");
+  static_assert(BlockThreads % warp_threads == 0);
+  static_assert(SmemMultiplier > 0);
 
   using key_t   = KeyT;
   using index_t = IndexT;
@@ -38,7 +39,8 @@ class BlockBinfly
       key_t block[max_smem_keys];
       key_t warp[num_warps][max_warp_smem_keys];
     } search_data;
-    index_t warp_ends[num_warps - 1]; // For each warp but the last
+    index_t warp_ends[cuda::std::max(num_warps - 1,
+                                     static_cast<std::uint32_t>(1))]; // For each warp but the last
   };
 
 public:

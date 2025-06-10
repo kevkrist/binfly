@@ -13,7 +13,6 @@ binary_search(const T* search_data, const T& search_key, IndexT start, IndexT en
 {
   // Sentinel key indicating that search_data does not contain a key satisfying <= semantics with
   // respect to search_key.
-  static constexpr IndexT sentinel = std::numeric_limits<IndexT>::max();
 
   IndexT idx;
   T current_key;
@@ -38,7 +37,7 @@ binary_search(const T* search_data, const T& search_key, IndexT start, IndexT en
   }
 
   // start has incremented one beyond the index satisfying <= semantics
-  return start == 0 ? sentinel : start - 1;
+  return cuda::std::max(0, start - 1);
 }
 
 // The hint index is assumed to be in the range [start, end)

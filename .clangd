@@ -39,6 +39,8 @@ CompileFlags:
     - "-I/home/ubuntu/code/binfly/build/debug/_deps/cccl-src/thrust/thrust/cmake/../.." 
     - "-I/home/ubuntu/code/binfly/build/debug/_deps/cccl-src/libcudacxx/lib/cmake/libcudacxx/../../../include" 
     - "-I/home/ubuntu/code/binfly/build/debug/_deps/cccl-src/cub/cub/cmake/../.."
+    - "-I/home/ubuntu/code/binfly/build/debug/_deps/googletest-src/googletest/include"
+    - "-I/home/ubuntu/code/binfly/build/debug/_deps/googletest-src/googletest"
   Remove:
     - -stdpar
     # strip CUDA fatbin args
