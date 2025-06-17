@@ -6,8 +6,7 @@ cmake_minimum_required(VERSION 3.23.1 FATAL_ERROR)
 include(CTest)
 
 # ##############################################################################
-# * Fetch Google Test
-# ##############################################################################
+# * Fetch Google Test ----------------------------------------------------------
 
 cpmaddpackage(NAME googletest GITHUB_REPOSITORY google/googletest GIT_TAG main)
 
@@ -44,8 +43,7 @@ function(ConfigureTest TEST_NAME)
 endfunction(ConfigureTest)
 
 # ##############################################################################
-# * host tests
-# ##############################################################################
+# * test sources ---------------------------------------------------------------
 
 configuretest(BINARY_SEARCH_TEST
               "${CMAKE_CURRENT_SOURCE_DIR}/binary_search_test.cu")

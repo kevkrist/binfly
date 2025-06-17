@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cub/cub.cuh>
-#include <cuda/std/type_traits>
+#include <cuda/std/__algorithm/max.h>
 
 namespace binfly
 {
@@ -11,9 +11,6 @@ template <typename T, typename IndexT>
 __host__ __device__ __forceinline__ IndexT
 binary_search(const T* search_data, const T& search_key, IndexT start, IndexT end)
 {
-  // Sentinel key indicating that search_data does not contain a key satisfying <= semantics with
-  // respect to search_key.
-
   IndexT idx;
   T current_key;
 
@@ -37,7 +34,7 @@ binary_search(const T* search_data, const T& search_key, IndexT start, IndexT en
   }
 
   // start has incremented one beyond the index satisfying <= semantics
-  return cuda::std::max(0, start - 1);
+  return cuda::std::max(IndexT(0), start - 1);
 }
 
 // The hint index is assumed to be in the range [start, end)

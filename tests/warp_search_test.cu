@@ -1,3 +1,5 @@
+#define CUB_STDERR
+
 #include <binfly/block_binfly.cuh>
 #include <cooperative_groups.h>
 #include <cstdint>
@@ -7,12 +9,12 @@
 #include <thrust/host_vector.h>
 #include <thrust/sequence.h>
 
-using key_t                              = std::int32_t;
-using index_t                            = std::int32_t;
-constexpr std::uint32_t block_threads    = 32; // warp size
-constexpr std::uint32_t items_per_thread = 2;
-constexpr std::uint32_t num_search_keys  = block_threads * items_per_thread;
-constexpr std::uint32_t smem_multiplier  = 1;
+using key_t                             = std::int32_t;
+using index_t                           = std::int32_t;
+constexpr std::int32_t block_threads    = 32; // warp size
+constexpr std::int32_t items_per_thread = 2;
+constexpr std::int32_t num_search_keys  = block_threads * items_per_thread;
+constexpr std::int32_t smem_multiplier  = 1;
 
 // **Kernel for Warp Search**
 __global__ void test_warp_search_kernel(const key_t* search_data,

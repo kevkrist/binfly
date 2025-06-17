@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../block_binfly.cuh"
-#include "binary_search.cuh"
-#include "utils.cuh"
+#include <binfly/block_binfly.cuh>
+#include <binfly/detail/binary_search.cuh>
+#include <binfly/detail/utils.cuh>
 #include <cstdint>
 
 namespace binfly
@@ -11,11 +11,11 @@ namespace binfly
 //--------------------------------------------------//
 // Block-wide search, for a full tile
 //--------------------------------------------------//
-template <std::uint32_t BlockThreads,
-          std::uint32_t ItemsPerThread,
+template <std::int32_t BlockThreads,
+          std::int32_t ItemsPerThread,
           typename KeyT,
           typename IndexT,
-          std::uint32_t SmemMultiplier>
+          std::int32_t SmemMultiplier>
 __device__ __forceinline__ void
 BlockBinfly<BlockThreads, ItemsPerThread, KeyT, IndexT, SmemMultiplier>::block_search(
   IndexT (&search_indices)[ItemsPerThread],
@@ -24,13 +24,20 @@ BlockBinfly<BlockThreads, ItemsPerThread, KeyT, IndexT, SmemMultiplier>::block_s
   IndexT start,
   IndexT end)
 {
-  auto* search_data_alias = const_cast<key_t*>(search_data);
-  auto cached_start       = start;
-  auto block              = cg::this_thread_block();
-  auto warp               = cg::tiled_partition<warp_threads>(block);
+  auto* search_data_alias   = const_cast<key_t*>(search_data);
+  auto cached_start         = start;
+  auto block                = cg::this_thread_block();
+  auto warp                 = cg::tiled_partition<warp_threads>(block);
+  const index_t num_indices = end - start;
+
+  // First check for a trivial search space
+  if (num_indices == 1)
+  {
+    fill_registers(search_indices, start);
+    return;
+  }
 
   // If the search space fits in shared memory, do the binary search there
-  const index_t num_indices = end - start;
   if (num_indices <= max_smem_keys)
   {
     is_search_data_block_shared = true;
@@ -52,6 +59,7 @@ BlockBinfly<BlockThreads, ItemsPerThread, KeyT, IndexT, SmemMultiplier>::block_s
     start             = 0;
     end               = num_indices;
   }
+  __syncthreads(); // SMEM barrier
 
   // Update start for all but the first warp
   search_indices[0] = start;
@@ -91,11 +99,11 @@ BlockBinfly<BlockThreads, ItemsPerThread, KeyT, IndexT, SmemMultiplier>::block_s
 //--------------------------------------------------//
 // Block-wide search, for a partial tile
 //--------------------------------------------------//
-template <std::uint32_t BlockThreads,
-          std::uint32_t ItemsPerThread,
+template <std::int32_t BlockThreads,
+          std::int32_t ItemsPerThread,
           typename KeyT,
           typename IndexT,
-          std::uint32_t SmemMultiplier>
+          std::int32_t SmemMultiplier>
 __device__ __forceinline__ void
 BlockBinfly<BlockThreads, ItemsPerThread, KeyT, IndexT, SmemMultiplier>::block_search(
   IndexT (&search_indices)[ItemsPerThread],
@@ -110,9 +118,16 @@ BlockBinfly<BlockThreads, ItemsPerThread, KeyT, IndexT, SmemMultiplier>::block_s
   auto cached_start          = start;
   auto block                 = cg::this_thread_block();
   auto warp                  = cg::tiled_partition<warp_threads>(block);
+  const index_t num_indices  = end - start;
+
+  // First check for a trivial search space
+  if (num_indices == 1)
+  {
+    fill_registers(search_indices, start);
+    return;
+  }
 
   // If the search space fits in shared memory, do the binary search there
-  const index_t num_indices = end - start;
   if (num_indices <= max_smem_keys)
   {
     is_search_data_block_shared = true;
@@ -124,16 +139,17 @@ BlockBinfly<BlockThreads, ItemsPerThread, KeyT, IndexT, SmemMultiplier>::block_s
       const std::uint32_t smem_idx = block.thread_rank() + idx * BlockThreads;
       if (smem_idx < num_indices)
       {
-        storage.search_data[smem_idx] = search_data[start + smem_idx];
+        storage.search_data.block[smem_idx] = search_data[start + smem_idx];
       }
     }
 
     // Update the search_data pointer and the start and end indices
-    search_data_alias = storage.search_data;
+    search_data_alias = storage.search_data.block;
     cached_start      = start;
     start             = 0;
     end               = num_indices;
   }
+  __syncthreads(); // SMEM barrier
 
   // Update start for all but the first warp
   search_indices[0] = start;
@@ -164,7 +180,7 @@ BlockBinfly<BlockThreads, ItemsPerThread, KeyT, IndexT, SmemMultiplier>::block_s
     std::uint32_t local_idx = block.thread_rank() * ItemsPerThread;
     if (warp.thread_rank() != 0 && local_idx < num_valid_keys)
     {
-      search_indices[0] = binary_search(search_data, search_keys[0], start, end);
+      search_indices[0] = binary_search(search_data_alias, search_keys[0], start, end);
     }
     ++local_idx;
 
@@ -174,7 +190,7 @@ BlockBinfly<BlockThreads, ItemsPerThread, KeyT, IndexT, SmemMultiplier>::block_s
       if (local_idx < num_valid_keys)
       {
         // KEVIN: consider narrowing the box by propagating starts from below
-        search_indices[idx] = binary_search(search_data, search_keys[idx], start, end);
+        search_indices[idx] = binary_search(search_data_alias, search_keys[idx], start, end);
       }
     }
   }
