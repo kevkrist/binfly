@@ -22,26 +22,27 @@ TEST(PartitionedSearchTest, ThreeTileSearch)
 
   constexpr auto tile_items                = block_threads * items_per_thread;
   constexpr auto num_search_keys           = num_tiles * tile_items - 1;
-  constexpr auto num_ctas                  = num_tiles + 1;
+  constexpr auto num_partitions            = num_tiles + 1;
   thrust::device_vector<key_t> search_data = {5, 10, 15};
   thrust::device_vector<key_t> search_keys(num_search_keys);
   thrust::sequence(search_keys.begin(), search_keys.end(), 0, 2);
-  thrust::device_vector<index_t> tile_starts(num_ctas);
+  thrust::device_vector<index_t> tile_starts(num_partitions);
 
   binfly::partitioned_search<tile_items>
-    <<<num_ctas, block_threads>>>(thrust::raw_pointer_cast(tile_starts.data()),
-                                  num_tiles,
-                                  thrust::raw_pointer_cast(search_keys.data()),
-                                  static_cast<index_t>(search_keys.size()),
-                                  thrust::raw_pointer_cast(search_data.data()),
-                                  static_cast<index_t>(search_data.size()));
+    <<<cuda::ceil_div(num_partitions, block_threads), block_threads>>>(
+      thrust::raw_pointer_cast(tile_starts.data()),
+      num_partitions,
+      thrust::raw_pointer_cast(search_keys.data()),
+      static_cast<index_t>(search_keys.size()),
+      thrust::raw_pointer_cast(search_data.data()),
+      static_cast<index_t>(search_data.size()));
   CubDebugExit(cudaDeviceSynchronize());
 
   // Validate result on host
   thrust::host_vector<index_t> tile_starts_h = tile_starts;
   thrust::host_vector<key_t> search_data_h   = search_data;
   thrust::host_vector<key_t> search_keys_h   = search_keys;
-  for (auto tile = 0; tile <= num_ctas; ++tile)
+  for (auto tile = 0; tile < num_partitions; ++tile)
   {
     const index_t key_idx  = std::min(tile * tile_items, num_search_keys - 1);
     const index_t expected = binfly::binary_search(thrust::raw_pointer_cast(search_data_h.data()),

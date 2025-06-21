@@ -49,7 +49,7 @@ __global__ void test_device_binfly_kernel(const key_t* search_data,
   block_load_t(load_storage).Load(search_keys + offset, thread_search_keys, num_valid_keys);
 
   // Do block search
-  if (num_valid_keys < tile_items)
+  if (num_valid_keys < tile_items) // Partial tile
   {
     block_binfly_t(binfly_storage)
       .block_search(thread_search_indices,
@@ -58,7 +58,7 @@ __global__ void test_device_binfly_kernel(const key_t* search_data,
                     num_valid_keys,
                     tile_starts);
   }
-  else
+  else // Full tile
   {
     // Partial tile
     block_binfly_t(binfly_storage)
@@ -94,7 +94,7 @@ protected:
     thrust::device_vector<index_t> search_indices(num_search_keys);
 
     // Initialize tile starts
-    std::size_t num_tile_starts = 0;
+    index_t num_tile_starts = 0;
     CubDebugExit(device_binfly_t::tile_starts(nullptr,
                                               num_tile_starts,
                                               thrust::raw_pointer_cast(search_keys.data()),
@@ -140,7 +140,7 @@ protected:
   }
 };
 
-using device_binfly_test_t = DeviceBinflyTest<32, 1>;
+using device_binfly_test_t = DeviceBinflyTest<64, 2>;
 
 // **Test 1: Full tiles, search data fits in shared memory**
 TEST_F(device_binfly_test_t, FullTileSmem)

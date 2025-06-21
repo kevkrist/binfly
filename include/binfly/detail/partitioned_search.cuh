@@ -9,14 +9,18 @@ namespace binfly
 
 template <std::int32_t TileItems, typename IndexT, typename KeyT>
 __global__ void partitioned_search(IndexT* tile_starts,
-                                   IndexT num_tiles,
+                                   IndexT num_tile_starts, // num_tiles + 1
                                    const KeyT* search_keys,
                                    IndexT num_search_keys,
                                    const KeyT* search_data,
                                    IndexT num_search_data)
 {
   const IndexT tile_idx = blockIdx.x * TileItems + threadIdx.x;
-  if (tile_idx <= num_tiles)
+  if (tile_idx == (num_tile_starts - 1))
+  {
+    tile_starts[tile_idx] = num_search_data - 1;
+  }
+  else if (tile_idx < num_tile_starts)
   {
     const IndexT key_idx =
       cuda::std::min(tile_idx * static_cast<IndexT>(TileItems), num_search_keys - 1);

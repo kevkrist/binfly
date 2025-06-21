@@ -3,6 +3,6 @@
 
 int main()
 {
-  std::cout << "DUMMY\n";
+  std::cout << "This is a DUMMY placeholder...\n";
   return 0;
 }
