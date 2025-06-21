@@ -4,8 +4,7 @@
 cmake_minimum_required(VERSION 3.23.1 FATAL_ERROR)
 
 # ##############################################################################
-# * compiler function
-# -----------------------------------------------------------------------------
+# * compiler function ----------------------------------------------------------
 function(ConfigureExample EXAMPLE_NAME EXAMPLE_SRC)
   add_executable(${EXAMPLE_NAME} "${EXAMPLE_SRC}")
   set_target_properties(
@@ -21,7 +20,6 @@ function(ConfigureExample EXAMPLE_NAME EXAMPLE_SRC)
 endfunction(ConfigureExample)
 
 # ##############################################################################
-# Example sources
-# ##############################################################################
-# ##############################################################################
+# * example sources ------------------------------------------------------------
+
 configureexample(BINFLY_DUMMY "${CMAKE_CURRENT_SOURCE_DIR}/binfly.cu")
