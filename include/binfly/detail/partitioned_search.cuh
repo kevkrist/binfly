@@ -3,18 +3,22 @@
 #include <binfly/detail/binary_search.cuh>
 #include <cstdint>
 #include <cuda/std/__algorithm/min.h>
+#include <cuda/std/iterator>
 
 namespace binfly
 {
 
-template <std::int32_t TileItems, typename IndexT, typename KeyT>
+template <std::int32_t TileItems, typename IndexT, typename KeyT, typename KeyIterT>
 __global__ void partitioned_search(IndexT* tile_starts,
                                    IndexT num_tile_starts, // num_tiles + 1
-                                   const KeyT* search_keys,
+                                   KeyIterT search_keys,
                                    IndexT num_search_keys,
                                    const KeyT* search_data,
                                    IndexT num_search_data)
 {
+  static_assert(cuda::std::is_same_v<typename cuda::std::iterator_traits<KeyIterT>::value_type,
+                                     KeyT>); // Sanity check
+
   const IndexT tile_idx = blockIdx.x * TileItems + threadIdx.x;
   if (tile_idx == (num_tile_starts - 1))
   {

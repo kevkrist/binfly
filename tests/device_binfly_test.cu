@@ -60,7 +60,6 @@ __global__ void test_device_binfly_kernel(const key_t* search_data,
   }
   else // Full tile
   {
-    // Partial tile
     block_binfly_t(binfly_storage)
       .block_search(thread_search_indices, search_data, thread_search_keys, tile_starts);
   }

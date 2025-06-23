@@ -15,9 +15,10 @@ struct DeviceBinfly
   static constexpr auto items_per_thread = ItemsPerThread;
   static constexpr auto tile_items       = block_threads * items_per_thread;
 
+  template<typename KeyIterT>
   static __host__ cudaError_t tile_starts(IndexT* tile_starts,
                                           IndexT& num_tile_starts,
-                                          const KeyT* search_keys,
+                                          KeyIterT search_keys,
                                           IndexT num_search_keys,
                                           const KeyT* search_data,
                                           IndexT num_search_data,
@@ -34,7 +35,8 @@ struct DeviceBinfly
     }
 
     // Assume correct allocation
-    assert(num_tile_starts == num_tiles + 1);
+    assert(num_tile_starts == num_tiles + 1); // Compiled away in Release mode
+
     const std::size_t num_partitioned_search_tiles =
       cuda::ceil_div(num_tile_starts, static_cast<IndexT>(block_threads));
     partitioned_search<tile_items>
